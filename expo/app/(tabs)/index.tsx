@@ -1,14 +1,34 @@
-import { StyleSheet } from 'react-native';
+import {StyleSheet} from 'react-native';
+import {CameraView, CameraType, useCameraPermissions} from 'expo-camera';
+import {useState} from 'react';
+import {Text, View} from '@/components/Themed';
 
-import EditScreenInfo from '@/components/EditScreenInfo';
-import { Text, View } from '@/components/Themed';
+export default function CameraScreen() {
+  const [facing, setFacing] = useState<CameraType>('back');
+  const [permission, requestPermission] = useCameraPermissions();
 
-export default function TabOneScreen() {
+  if (!permission) {
+    // Camera permissions are still loading
+    return <View />;
+  }
+
+  if (!permission.granted) {
+    // Camera permissions are not granted yet
+    return (
+      <View style={styles.container}>
+        <Text style={styles.message}>We need your permission to show the camera</Text>
+        <Text style={styles.button} onPress={requestPermission}>
+          Grant permission
+        </Text>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Tab One</Text>
-      <View style={styles.separator} lightColor="#eee" darkColor="rgba(255,255,255,0.1)" />
-      <EditScreenInfo path="app/(tabs)/index.tsx" />
+      <CameraView style={styles.camera} facing={facing}>
+        {/* Camera view content can be added here later */}
+      </CameraView>
     </View>
   );
 }
@@ -16,16 +36,21 @@ export default function TabOneScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    alignItems: 'center',
     justifyContent: 'center',
   },
-  title: {
-    fontSize: 20,
-    fontWeight: 'bold',
+  message: {
+    textAlign: 'center',
+    paddingBottom: 10,
   },
-  separator: {
-    marginVertical: 30,
-    height: 1,
-    width: '80%',
+  button: {
+    textAlign: 'center',
+    backgroundColor: '#2196F3',
+    color: 'white',
+    padding: 10,
+    margin: 20,
+    borderRadius: 5,
+  },
+  camera: {
+    flex: 1,
   },
 });
