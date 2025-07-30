@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
-import { createClient } from "@supabase/supabase-js";
+import { useEffect, useState } from 'react';
+import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -10,12 +10,20 @@ function App() {
   const [images, setImages] = useState([]);
 
   useEffect(() => {
+    invokeHelloWorldEdgeFunction();
     getImages();
   }, []);
 
+  async function invokeHelloWorldEdgeFunction() {
+    const { data, error } = await supabase.functions.invoke('hello-world', {
+      body: { name: 'me' },
+    });
+    console.log(data);
+  }
+
   async function getImages() {
-    const { data } = await supabase.from("images").select();
-    console.log("data:", data);
+    const { data } = await supabase.from('images').select();
+    console.log('data:', data);
     setImages(data);
   }
 
