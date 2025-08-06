@@ -30,6 +30,7 @@ export default function TabLayout() {
         options={{
           title: 'Camera',
           tabBarIcon: ({color}) => <TabBarIcon name="camera" color={color} />,
+          headerShown: false,
         }}
       />
       <Tabs.Screen
