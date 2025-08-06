@@ -1,9 +1,8 @@
-import {StyleSheet, TouchableOpacity, Image, Alert} from 'react-native';
+import {StyleSheet, TouchableOpacity, Image} from 'react-native';
 import {CameraView, CameraType, useCameraPermissions} from 'expo-camera';
 import {useState, useRef} from 'react';
 import {Text, View} from '@/components/Themed';
-import {useImageUpload} from '@/hooks/useImageUpload';
-import uuid from 'react-native-uuid';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 
 type CameraMode = 'camera' | 'preview';
 
@@ -13,62 +12,7 @@ export default function CameraScreen() {
   const [mode, setMode] = useState<CameraMode>('camera');
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const cameraRef = useRef<CameraView>(null);
-
-  // Upload mutation using custom hook
-  const uploadMutation = useImageUpload();
-
-  // Success and error handlers
-  const handleUploadSuccess = (data: {uploadPath: string; banter: string}) => {
-    // Just go back to camera mode - the banter will appear in the gallery
-    handleCancel();
-  };
-
-  const handleUploadError = (error: Error) => {
-    Alert.alert(
-      'Upload Failed',
-      `Sorry, something went wrong: ${error.message}`,
-      [{text: 'OK'}]
-    );
-  };
-
-  const takePicture = async () => {
-    if (cameraRef.current) {
-      try {
-        const photo = await cameraRef.current.takePictureAsync({
-          quality: 0.8,
-          base64: false,
-        });
-        setCapturedImage(photo.uri);
-        setMode('preview');
-      } catch (error) {
-        Alert.alert('Error', 'Failed to take picture');
-      }
-    }
-  };
-
-  const handleSubmit = () => {
-    if (capturedImage) {
-      const fileName = `image_${uuid.v4()}.jpg`;
-      const banterId = uuid.v4() as string;
-
-      uploadMutation.mutate(
-        {
-          uri: capturedImage,
-          fileName,
-          banterId,
-        },
-        {
-          onSuccess: handleUploadSuccess,
-          onError: handleUploadError,
-        }
-      );
-    }
-  };
-
-  const handleCancel = () => {
-    setCapturedImage(null);
-    setMode('camera');
-  };
+  const insets = useSafeAreaInsets();
 
   if (!permission) {
     // Camera permissions are still loading
@@ -87,26 +31,43 @@ export default function CameraScreen() {
     );
   }
 
+  const takePicture = async () => {
+    if (cameraRef.current) {
+      try {
+        const photo = await cameraRef.current.takePictureAsync({
+          quality: 0.8,
+          base64: false,
+        });
+        setCapturedImage(photo.uri);
+        setMode('preview');
+      } catch (error) {
+        console.log('Error taking picture:', error);
+      }
+    }
+  };
+
+  const handleSubmit = () => {
+    // For now, just go back to camera mode
+    setCapturedImage(null);
+    setMode('camera');
+  };
+
+  const handleCancel = () => {
+    setCapturedImage(null);
+    setMode('camera');
+  };
+
   if (mode === 'preview' && capturedImage) {
     return (
-      <View style={styles.previewContainer}>
-        <Image source={{uri: capturedImage}} style={styles.preview} />
-        <View style={styles.previewControls}>
-          <TouchableOpacity
-            style={[styles.controlButton, styles.cancelButton]}
-            onPress={handleCancel}
-            disabled={uploadMutation.isPending}
-          >
-            <Text style={styles.controlButtonText}>Cancel</Text>
+      <View style={styles.container}>
+        <Image source={{uri: capturedImage}} style={styles.previewImage} />
+        {/* Buttons positioned absolutely on top, just like camera mode */}
+        <View style={[styles.previewControls, {bottom: insets.bottom + 20}]}>
+          <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
+            <Text style={styles.buttonText}>Cancel</Text>
           </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.controlButton, styles.submitButton]}
-            onPress={handleSubmit}
-            disabled={uploadMutation.isPending}
-          >
-            <Text style={styles.controlButtonText}>
-              {uploadMutation.isPending ? 'Uploading...' : 'Submit'}
-            </Text>
+          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
+            <Text style={styles.buttonText}>Submit</Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -114,29 +75,28 @@ export default function CameraScreen() {
   }
 
   return (
-    <View style={styles.cameraContainer}>
-      <CameraView style={styles.camera} facing={facing} ref={cameraRef}>
-        <View style={styles.cameraControls}>
-          <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
-            <View style={styles.captureButtonInner} />
-          </TouchableOpacity>
-        </View>
-      </CameraView>
+    <View style={styles.container}>
+      <CameraView style={styles.camera} facing={facing} ref={cameraRef} />
+
+      {/* Capture button positioned absolutely on top */}
+      <View style={[styles.captureButtonContainer, {bottom: insets.bottom}]}>
+        <TouchableOpacity style={styles.captureButton} onPress={takePicture}>
+          <View style={styles.captureButtonInner} />
+        </TouchableOpacity>
+      </View>
     </View>
   );
 }
 
 const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: 'black',
+  },
   permissionContainer: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-  },
-  cameraContainer: {
-    flex: 1,
-  },
-  previewContainer: {
-    flex: 1,
   },
   message: {
     textAlign: 'center',
@@ -158,13 +118,12 @@ const styles = StyleSheet.create({
   camera: {
     flex: 1,
   },
-  cameraControls: {
+  captureButtonContainer: {
     position: 'absolute',
-    bottom: 0,
     left: 0,
     right: 0,
     alignItems: 'center',
-    paddingBottom: 50,
+    backgroundColor: 'transparent',
   },
   captureButton: {
     width: 80,
@@ -182,34 +141,35 @@ const styles = StyleSheet.create({
     borderRadius: 30,
     backgroundColor: 'white',
   },
-  preview: {
+  previewImage: {
     flex: 1,
-    resizeMode: 'contain',
+    resizeMode: 'cover',
   },
   previewControls: {
+    position: 'absolute',
+    left: 0,
+    right: 0,
     flexDirection: 'row',
     justifyContent: 'space-around',
     alignItems: 'center',
     paddingVertical: 30,
     paddingHorizontal: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    backgroundColor: 'transparent',
   },
-  controlButton: {
+  cancelButton: {
+    backgroundColor: '#ff4444',
     paddingHorizontal: 30,
     paddingVertical: 15,
     borderRadius: 25,
     minWidth: 120,
     alignItems: 'center',
   },
-  cancelButton: {
-    backgroundColor: '#ff4444',
-  },
   submitButton: {
     backgroundColor: '#00aa00',
-  },
-  controlButtonText: {
-    color: 'white',
-    fontSize: 16,
-    fontWeight: 'bold',
+    paddingHorizontal: 30,
+    paddingVertical: 15,
+    borderRadius: 25,
+    minWidth: 120,
+    alignItems: 'center',
   },
 });
