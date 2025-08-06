@@ -3,6 +3,7 @@ import {CameraView, CameraType, useCameraPermissions} from 'expo-camera';
 import {useState, useRef} from 'react';
 import {Text, View} from '@/components/Themed';
 import {useSafeAreaInsets} from 'react-native-safe-area-context';
+import {useImageUpload} from '@/hooks/useImageUpload';
 
 type CameraMode = 'camera' | 'preview';
 
@@ -13,6 +14,8 @@ export default function CameraScreen() {
   const [capturedImage, setCapturedImage] = useState<string | null>(null);
   const cameraRef = useRef<CameraView>(null);
   const insets = useSafeAreaInsets();
+
+  const uploadImage = useImageUpload();
 
   if (!permission) {
     // Camera permissions are still loading
@@ -46,10 +49,18 @@ export default function CameraScreen() {
     }
   };
 
-  const handleSubmit = () => {
-    // For now, just go back to camera mode
-    setCapturedImage(null);
-    setMode('camera');
+  const handleSubmit = async () => {
+    if (!capturedImage) return;
+
+    try {
+      await uploadImage.mutateAsync({imageUri: capturedImage});
+      // Success! Go back to camera mode
+      setCapturedImage(null);
+      setMode('camera');
+    } catch (error) {
+      console.error('Upload failed:', error);
+      // You could show an error message here instead of just logging
+    }
   };
 
   const handleCancel = () => {
@@ -66,8 +77,14 @@ export default function CameraScreen() {
           <TouchableOpacity style={styles.cancelButton} onPress={handleCancel}>
             <Text style={styles.buttonText}>Cancel</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.submitButton} onPress={handleSubmit}>
-            <Text style={styles.buttonText}>Submit</Text>
+          <TouchableOpacity
+            style={[styles.submitButton, uploadImage.isPending && styles.submitButtonDisabled]}
+            onPress={handleSubmit}
+            disabled={uploadImage.isPending}
+          >
+            <Text style={styles.buttonText}>
+              {uploadImage.isPending ? 'Uploading...' : 'Submit'}
+            </Text>
           </TouchableOpacity>
         </View>
       </View>
@@ -171,5 +188,9 @@ const styles = StyleSheet.create({
     borderRadius: 25,
     minWidth: 120,
     alignItems: 'center',
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#666666',
+    opacity: 0.7,
   },
 });
