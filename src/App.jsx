@@ -5,7 +5,7 @@ import fs from 'fs';
 
 const openai = new OpenAI();
 const imagePath = 'TODO_PATH_TO_IMAGE.JPG';
-const base64Image = fs.readFileSync(imagePath, 'base64');
+const base64Image = fs.readFilegitSync(imagePath, 'base64');
 
 const supabase = createClient(
   import.meta.env.VITE_SUPABASE_URL,
@@ -25,7 +25,7 @@ function App() {
     const { data, error } = await supabase.functions.invoke('hello-world', {
       body: { name: 'me' },
     });
-    console.log("from hello world function:", data);
+    console.log('from hello world function:', data);
   }
 
   async function getImages() {
@@ -51,7 +51,7 @@ function App() {
         },
       ],
     });
-    console.log("from getImageBanter - response.output_text: ", response.output_text)
+    console.log('from getImageBanter - response.output_text: ', response.output_text);
   }
 
   return (
