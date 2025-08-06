@@ -1,23 +1,52 @@
+// after editing this file:
+// supabase functions deploy hello-world
+
 // Follow this setup guide to integrate the Deno language server with your editor:
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, go to definition, etc.
 
 // Setup type definitions for built-in Supabase Runtime APIs
 import "jsr:@supabase/functions-js/edge-runtime.d.ts"
+import { serve } from 'https://deno.land/std/http/server.ts'
+
 
 console.log("Hello from Functions!")
 
 Deno.serve(async (req) => {
-  const { name } = await req.json()
-  const data = {
-    message: `Hello ${name} from hello-world edge function!`,
-  }
+   const corsHeaders = {
+  'Access-Control-Allow-Origin': '*',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
+}
 
-  return new Response(
-    JSON.stringify(data),
-    { headers: { "Content-Type": "application/json" } },
-  )
+  if (req.method === 'OPTIONS') {
+    console.log("handling CORS preflight request")
+    return new Response(null, {status: 204, headers: corsHeaders})
+  }
+  console.log("here")
+  console.log("req: ", req)
+
+  try {
+    const body = await req.json()
+
+    const name = body?.name ?? 'world' // declare name with fallback if undefined 
+    console.log("Name from request:", name)
+
+    const data = {message: `Hello ${name}!`}
+    
+    return new Response(JSON.stringify(data), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 200,
+    })
+
+  } catch (error) {
+    return new Response(JSON.stringify({ error: error.message }), {
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+      status: 400,
+    })
+  }
 })
+
 
 /* 
 
