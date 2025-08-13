@@ -1,4 +1,5 @@
 import {StyleSheet, TouchableOpacity, Image} from 'react-native';
+import {Ionicons} from '@expo/vector-icons';
 import {CameraView, CameraType, useCameraPermissions} from 'expo-camera';
 import {useState, useRef} from 'react';
 import {Text, View} from '@/components/Themed';
@@ -47,6 +48,10 @@ export default function CameraScreen() {
         console.log('Error taking picture:', error);
       }
     }
+  };
+
+  const toggleFacing = () => {
+    setFacing((current) => (current === 'back' ? 'front' : 'back'));
   };
 
   const handleSubmit = async () => {
@@ -101,6 +106,16 @@ export default function CameraScreen() {
           <View style={styles.captureButtonInner} />
         </TouchableOpacity>
       </View>
+
+      {/* Switch camera button positioned bottom-right */}
+      <TouchableOpacity
+        style={[styles.switchButton, {bottom: insets.bottom + 12}]}
+        onPress={toggleFacing}
+        accessibilityLabel="Switch camera"
+        hitSlop={{top: 10, bottom: 10, left: 10, right: 10}}
+      >
+        <Ionicons name="camera-reverse-outline" size={28} color="white" />
+      </TouchableOpacity>
     </View>
   );
 }
@@ -157,6 +172,17 @@ const styles = StyleSheet.create({
     height: 60,
     borderRadius: 30,
     backgroundColor: 'white',
+  },
+  switchButton: {
+    position: 'absolute',
+    right: 20,
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: 'rgba(0, 0, 0, 0.35)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 0,
   },
   previewImage: {
     flex: 1,
