@@ -1,4 +1,5 @@
 import {BanterExcerpt} from '@/types/banter';
+import {supabase} from '@/lib/supabase';
 
 export interface GenerateBanterRequest {
   imageUri: string;
@@ -8,16 +9,49 @@ export interface GenerateBanterResponse {
   excerpts: BanterExcerpt[];
 }
 
-// Mock remote call. Replace implementation later.
-export async function requestBanterForImage(imageUri: string): Promise<BanterExcerpt[]> {
-  // Simulate network latency
-  await new Promise(resolve => setTimeout(resolve, 800));
+// Persist an image to Supabase Storage and return a signed URL suitable for backend processing
+export async function persistImage(imageUri: string, imageId: string): Promise<string> {
+  const path = `banters/${imageId}.jpg`;
 
-  return [
-    {text: 'Hey this is a really neat picture.'},
-    {text: 'I like the work you put into the angles and lighting.'},
-    {text: 'It really puts me at ease seeing such tasteful imagery.'},
-  ];
+  const res = await fetch(imageUri);
+  const blob = await res.blob();
+  const contentType = res.headers.get('content-type') || 'image/jpeg';
+
+  const { error: uploadError } = await supabase
+    .storage
+    .from('images')
+    .upload(path, blob, { contentType, upsert: true });
+
+  if (uploadError) {
+    throw new Error(`Upload failed: ${uploadError.message}`);
+  }
+
+  const { data: signed, error: signedErr } = await supabase
+    .storage
+    .from('images')
+    .createSignedUrl(path, 60 * 60); // 1 hour
+
+  if (signedErr || !signed?.signedUrl) {
+    throw new Error(`Failed to create signed URL: ${signedErr?.message ?? 'Unknown error'}`);
+  }
+
+  return signed.signedUrl;
+}
+
+// Call the Supabase Edge Function to generate banter for a given image URL
+export async function requestBanterForImage(imageUrl: string): Promise<BanterExcerpt[]> {
+  const { data, error } = await supabase.functions.invoke('generate-banter', {
+    body: { image_url: imageUrl },
+  });
+
+  if (error) {
+    throw new Error(`Function error: ${error.message}`);
+  }
+
+  const excerpts: BanterExcerpt[] = Array.isArray(data?.excerpts)
+    ? data.excerpts
+    : [];
+  return excerpts;
 }
 
 

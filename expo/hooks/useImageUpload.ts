@@ -2,8 +2,7 @@ import {useMutation, useQueryClient} from '@tanstack/react-query';
 import uuid from 'react-native-uuid';
 import {Banter, BanterExcerpt} from '@/types/banter';
 import {addOptimisticBanter, updateOptimisticBanter} from '@/hooks/useBanters';
-import {requestBanterForImage} from '../lib/banterService';
-import {ensureImagePersisted} from '@/lib/localStore';
+import {persistImage, requestBanterForImage} from '@/lib/banterService';
 
 interface UploadImageParams {
   imageUri: string;
@@ -18,12 +17,10 @@ export const useImageUpload = () => {
 
   return useMutation<UploadResult, Error, UploadImageParams, {banterId: string}>({
     mutationFn: async ({imageUri}) => {
-      // Persist image locally so it survives reloads
-      const banterId = uuid.v4() as string;
-      const persistedUri = await ensureImagePersisted(imageUri, banterId);
-      // Call mock remote banter generator
-      const excerpts = await requestBanterForImage(persistedUri);
-      return {excerpts};
+      const imageId = uuid.v4() as string;
+      const signedUrl = await persistImage(imageUri, imageId);
+      const excerpts = await requestBanterForImage(signedUrl);
+      return { excerpts };
     },
     onMutate: async ({imageUri}) => {
       // Generate a unique ID for this banter
