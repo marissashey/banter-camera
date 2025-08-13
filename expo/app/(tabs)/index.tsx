@@ -57,15 +57,10 @@ export default function CameraScreen() {
   const handleSubmit = async () => {
     if (!capturedImage) return;
 
-    try {
-      await uploadImage.mutateAsync({imageUri: capturedImage});
-      // Success! Go back to camera mode
-      setCapturedImage(null);
-      setMode('camera');
-    } catch (error) {
-      console.error('Upload failed:', error);
-      // You could show an error message here instead of just logging
-    }
+    // Fire-and-forget to keep UI responsive
+    uploadImage.mutate({imageUri: capturedImage});
+    setCapturedImage(null);
+    setMode('camera');
   };
 
   const handleCancel = () => {
