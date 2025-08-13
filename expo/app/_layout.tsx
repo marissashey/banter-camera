@@ -6,6 +6,7 @@ import * as SplashScreen from 'expo-splash-screen';
 import {useEffect} from 'react';
 import 'react-native-reanimated';
 import {QueryClient, QueryClientProvider} from '@tanstack/react-query';
+import {AuthProvider, useAuth} from '@/contexts/AuthContext';
 
 import {useColorScheme} from '@/components/useColorScheme';
 
@@ -50,16 +51,33 @@ export default function RootLayout() {
 
 function RootLayoutNav() {
   const colorScheme = useColorScheme();
+  const {isLoading, session} = useAuth();
+
+  if (isLoading) {
+    return null;
+  }
+
+  const AppStack = (
+    <Stack>
+      <Stack.Screen name="(tabs)" options={{headerShown: false}} />
+      <Stack.Screen name="viewer" options={{headerShown: false}} />
+      <Stack.Screen name="modal" options={{presentation: 'modal'}} />
+    </Stack>
+  );
+
+  const AuthStack = (
+    <Stack>
+      <Stack.Screen name="login" options={{headerShown: false}} />
+    </Stack>
+  );
 
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{headerShown: false}} />
-          <Stack.Screen name="viewer" options={{headerShown: false}} />
-          <Stack.Screen name="modal" options={{presentation: 'modal'}} />
-        </Stack>
-      </ThemeProvider>
+      <AuthProvider>
+        <ThemeProvider value={colorScheme === 'dark' ? DarkTheme : DefaultTheme}>
+          {session ? AppStack : AuthStack}
+        </ThemeProvider>
+      </AuthProvider>
     </QueryClientProvider>
   );
 }
